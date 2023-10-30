@@ -1,0 +1,22 @@
+Parameters:
+
+    VpcCIDR:
+        Type: String
+        Default: 10.0.0.0/16
+        Description: This is a common VPC which will consist of every resource
+    PubSubnetCIDR1:
+        Type: String
+        Default: 10.42.1.0/16
+        Description: Public Subnet CIDR for AZ 1
+    PvtSubnetCIDR1:
+        Type: String
+        Default: 10.42.2.0/16
+        Description: Private Subnet CIDR for AZ 1
+    PubSubnetCIDR2:
+        Type: String
+        Default: 10.42.3.0/16
+        Description: Public Subnet CIDR for AZ 2
+    PvtSubnetCIDR2:
+        Type: String
+        Default: 10.42.4.0/16
+        Description: Private Subnet CIDR for AZ 2
