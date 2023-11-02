@@ -20,3 +20,9 @@ Parameters:
         Type: String
         Default: 10.42.4.0/16
         Description: Private Subnet CIDR for AZ 2
+    KeyName:
+        Type: AWS::EC2::KeyPair::KeyName
+        Default: new_key
+    InstanceType:
+        Type: String
+        Default: t2.micro
