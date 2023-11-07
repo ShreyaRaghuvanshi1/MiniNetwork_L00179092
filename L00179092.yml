@@ -144,29 +144,35 @@ Resources:
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
+          FromPort: 22
+          ToPort: 22
           CidrIp: 0.0.0.0/0
-      SecurityGroupEgress:
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
           CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+        - IpProtocol: icmp
+          FromPort: 8
+          ToPort: -1
+          CidrIp: 0.0.0.0/0
+
 
   SecurityGroupJumpbox:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: SSH Security Group
       SecurityGroupIngress:
-        IpProtocol: tcp
-        FromPort: 80
-        ToPort: 80
-        CidrIp: 0.0.0.0/0
-      SecurityGroupEgress:
-        IpProtocol: tcp
-        FromPort: 80
-        ToPort: 80
-        CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref SSHLocation
+        - IpProtocol: icmp
+          FromPort: 8
+          ToPort: -1
+          CidrIp: 0.0.0.0/0
       VpcId: !Ref VPC
 
   SecurityGroupWebServer:
@@ -176,13 +182,19 @@ Resources:
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
+          FromPort: 22
+          ToPort: 22
           CidrIp: 0.0.0.0/0
-      SecurityGroupEgress:
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+        - IpProtocol: icmp
+          FromPort: 8
+          ToPort: -1
           CidrIp: 0.0.0.0/0
 
   SecurityGroupDataBase:
@@ -206,7 +218,8 @@ Resources:
       SubnetId:
         Ref: PubSubnet1
       ImageId: ami-05c13eab67c5d8861
-      SecurityGroupIds: - !GetAtt "SecurityGroupWebApp.GroupId"
+      SecurityGroupIds: 
+        - !Ref SecurityGroupWebApp
     Metadata:
       'AWS::CloudFormation::Init':
         configSets:
@@ -244,6 +257,7 @@ Resources:
       AvailabilityZone: us-east-1a
       DBInstanceClass: !Ref DBInstanceClass
       AllocatedStorage: !Ref DBAllocatedStorage
+      PubliclyAccessible: false
 
   EC2WebServer1AZ2:
     Type: 'AWS::EC2::Instance'
@@ -256,7 +270,7 @@ Resources:
         Ref: PubSubnet2
       ImageId: ami-05c13eab67c5d8861
       SecurityGroupIds: 
-          - !GetAtt "SecurityGroupWebServer.GroupId"
+        - !Ref SecurityGroupWebServer
     Metadata:
       'AWS::CloudFormation::Init':
         configSets:
@@ -291,3 +305,5 @@ Resources:
       SubnetId:
         Ref: PvtSubnet2
       ImageId: ami-05c13eab67c5d8861
+      SecurityGroupIds: 
+        - !Ref SecurityGroupJumpbox
