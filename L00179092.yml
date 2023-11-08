@@ -40,12 +40,14 @@ Parameters:
     MinLength: '1'
     MaxLength: '50'
     AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: Must start with a letter (either lowercase or uppercase) followed by zero or more characters, which can be letters or digits.
   DBUser:
     Description: Username for Admin
     Type: String
     MinLength: '1'
     MaxLength: '50'
     AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: Must start with a letter (either lowercase or uppercase) followed by zero or more characters, which can be letters or digits.
   DBPassword:
     NoEcho: 'true'
     Description: Password for Admin
@@ -53,6 +55,7 @@ Parameters:
     MinLength: '6'
     MaxLength: '25'
     AllowedPattern: '^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[#$%^&+=!]).{8,}$'
+    ConstraintDescription: The password must contain at least one uppercase letter, at least one lowercase letter, at least one digit, at least one special character and at least 8 characters in length.
   DBInstanceClass:
     Default: db.t2.micro
     Description: DB instance class
@@ -64,13 +67,19 @@ Parameters:
     Type: Number
     MinValue: '2'
     MaxValue: '25'
-    ConstraintDescription: must be between 05 and 20 GiB.
+    ConstraintDescription: Must be between 02 and 25 GiB.
+    
 Resources:
 
   VPC:
     Type: 'AWS::EC2::VPC'
     Properties:
       CidrBlock: !Ref VpcCIDR
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: VPC
 
   PubSubnet1:
     Type: 'AWS::EC2::Subnet'
@@ -79,6 +88,9 @@ Resources:
       VpcId: !Ref VPC
       AvailabilityZone: us-east-1a
       MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: Public Subnet 1
 
   PvtSubnet1:
     Type: 'AWS::EC2::Subnet'
@@ -87,6 +99,9 @@ Resources:
       VpcId: !Ref VPC
       AvailabilityZone: us-east-1a
       MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: Private Subnet 1
 
   PubSubnet2:
     Type: 'AWS::EC2::Subnet'
@@ -95,6 +110,9 @@ Resources:
       VpcId: !Ref VPC
       AvailabilityZone: us-east-1b
       MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: Public Subnet 2
 
   PvtSubnet2:
     Type: 'AWS::EC2::Subnet'
@@ -103,11 +121,18 @@ Resources:
       VpcId: !Ref VPC
       AvailabilityZone: us-east-1b
       MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: Private Subnet 2
 
   InternetGW:
     Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: IGW
 
-  Gateway:
+  GatewayAttachment:
     Type: 'AWS::EC2::VPCGatewayAttachment'
     Properties:
       VpcId: !Ref VPC
@@ -117,6 +142,9 @@ Resources:
     Type: 'AWS::EC2::RouteTable'
     Properties:
       VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: Public Route table
 
   PubRoute:
     Type: 'AWS::EC2::Route'
@@ -146,7 +174,7 @@ Resources:
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
-          CidrIp: 0.0.0.0/0
+          CidrIp: !Ref SSHLocation
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
@@ -154,10 +182,14 @@ Resources:
         - IpProtocol: tcp
           FromPort: 443
           ToPort: 443
+          CidrIp: 0.0.0.0/0
         - IpProtocol: icmp
           FromPort: 8
           ToPort: -1
           CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: Security Group for WebApp
 
 
   SecurityGroupJumpbox:
@@ -174,6 +206,9 @@ Resources:
           ToPort: -1
           CidrIp: 0.0.0.0/0
       VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: Security Group for JumpBox
 
   SecurityGroupWebServer:
     Type: 'AWS::EC2::SecurityGroup'
@@ -184,7 +219,7 @@ Resources:
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
-          CidrIp: 0.0.0.0/0
+          CidrIp: !Ref SSHLocation
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
@@ -196,6 +231,9 @@ Resources:
           FromPort: 8
           ToPort: -1
           CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: Security Group for WebServer
 
   SecurityGroupDataBase:
     Type: 'AWS::EC2::SecurityGroup'
@@ -206,6 +244,9 @@ Resources:
         FromPort: '3306'
         ToPort: '3306'
         SourceSecurityGroupId: !Ref SecurityGroupWebServer
+      Tags:
+        - Key: Name
+          Value: Security Group for DataBase
       VpcId: !Ref VPC
 
   EC2WebAppAZ1:
@@ -220,6 +261,9 @@ Resources:
       ImageId: ami-05c13eab67c5d8861
       SecurityGroupIds: 
         - !Ref SecurityGroupWebApp
+      Tags:
+        - Key: Name
+          Value: EC2 for Web App
     Metadata:
       'AWS::CloudFormation::Init':
         configSets:
@@ -244,6 +288,7 @@ Resources:
               httpd:
                 enabled: 'true'
                 ensureRunning: 'true'
+          
   EC2DataBase2AZ1:
     Type: 'AWS::RDS::DBInstance'
     Properties:
@@ -258,6 +303,9 @@ Resources:
       DBInstanceClass: !Ref DBInstanceClass
       AllocatedStorage: !Ref DBAllocatedStorage
       PubliclyAccessible: false
+      Tags:
+        - Key: Name
+          Value: Instance for Data Base
 
   EC2WebServer1AZ2:
     Type: 'AWS::EC2::Instance'
@@ -271,6 +319,9 @@ Resources:
       ImageId: ami-05c13eab67c5d8861
       SecurityGroupIds: 
         - !Ref SecurityGroupWebServer
+      Tags:
+        - Key: Name
+          Value: EC2 for Web Server
     Metadata:
       'AWS::CloudFormation::Init':
         configSets:
@@ -305,5 +356,8 @@ Resources:
       SubnetId:
         Ref: PvtSubnet2
       ImageId: ami-05c13eab67c5d8861
+      Tags:
+        - Key: Name
+          Value: Instance for Jump Box
       SecurityGroupIds: 
         - !Ref SecurityGroupJumpbox
