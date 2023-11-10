@@ -192,7 +192,7 @@ Resources:
           Value: Security Group for WebApp
 
 
-  SecurityGroupJumpbox:
+  SecurityGroupLB:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: SSH Security Group
@@ -205,10 +205,18 @@ Resources:
           FromPort: 8
           ToPort: -1
           CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0   
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: 0.0.0.0/0   
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: Security Group for JumpBox
+          Value: Security Group for LB
 
   SecurityGroupWebServer:
     Type: 'AWS::EC2::SecurityGroup'
@@ -264,31 +272,25 @@ Resources:
       Tags:
         - Key: Name
           Value: EC2 for Web App
-    Metadata:
-      'AWS::CloudFormation::Init':
-        configSets:
-          All:
-            - ConfigureSampleApp
-        ConfigureSampleApp:
-          packages:
-            yum:
-              httpd: []
-          files:
-            /var/www/html/index.html:
-              content: !Join 
-                - |+
-
-                - - >-
-                    <h1>This is a sample WebServer created by Shreya Raghuvanshi</h1>
-              mode: '000644'
-              owner: root
-              group: root
-          services:
-            sysvinit:
-              httpd:
-                enabled: 'true'
-                ensureRunning: 'true'
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+         
+          echo "<html><h1>WebServer created by Shreya Raghuvanshi</h1></html>" > /var/www/html/web.html
           
+
+  RDSDBSubnetGroup:
+    Properties: 
+      DBSubnetGroupDescription: This is subnet group for Database
+      SubnetIds: 
+        - Ref: PvtSubnet1
+        - Ref: PvtSubnet2
+      Tags: 
+        - 
+          Key: Name
+          Value: RdsSubnetGroup
+    Type: "AWS::RDS::DBSubnetGroup"
+
   EC2DataBase2AZ1:
     Type: 'AWS::RDS::DBInstance'
     Properties:
@@ -306,6 +308,10 @@ Resources:
       Tags:
         - Key: Name
           Value: Instance for Data Base
+      Port: 3306
+      DBSubnetGroupName: !Ref RDSDBSubnetGroup
+
+      
 
   EC2WebServer1AZ2:
     Type: 'AWS::EC2::Instance'
@@ -322,42 +328,23 @@ Resources:
       Tags:
         - Key: Name
           Value: EC2 for Web Server
-    Metadata:
-      'AWS::CloudFormation::Init':
-        configSets:
-          All:
-            - ConfigureSampleApp
-        ConfigureSampleApp:
-          packages:
-            yum:
-              httpd: []
-          files:
-            /var/www/html/index.html:
-              content: !Join 
-                - |+
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum -y update
+          yum -y install httpd
+          systemctl start httpd
+          systemctl enable httpd
+          echo "<html><h1>WebServer created by Shreya Raghuvanshi</h1></html>" > /var/www/html/index.html
 
-                - - >-
-                    <h1>This is a sample WebServer created by Shreya Raghuvanshi</h1>
-              mode: '000644'
-              owner: root
-              group: root
-          services:
-            sysvinit:
-              httpd:
-                enabled: 'true'
-                ensureRunning: 'true'
-  EC2JumpBox2AZ2:
-    Type: 'AWS::EC2::Instance'
+  LoadBalancerAZ2:
+    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
     Properties:
-      InstanceType:
-        Ref: InstanceType
-      KeyName:
-        Ref: KeyName
-      SubnetId:
-        Ref: PvtSubnet2
-      ImageId: ami-05c13eab67c5d8861
+      Subnets:
+        - Ref: PvtSubnet2
+        - Ref: PvtSubnet1
       Tags:
         - Key: Name
-          Value: Instance for Jump Box
-      SecurityGroupIds: 
-        - !Ref SecurityGroupJumpbox
+          Value: LB
+      SecurityGroups: 
+        - !Ref SecurityGroupLB
