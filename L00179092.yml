@@ -186,6 +186,29 @@ Resources:
       RouteTableId: !Ref PubRouteTable
       SubnetId: !Ref PubSubnet2
 
+
+  SecurityGroupLB:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: SSH Security Group
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref SSHLocation
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0   
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: 0.0.0.0/0   
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: Security Group for LB
+
   SecurityGroupWebApp:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -199,11 +222,11 @@ Resources:
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
-          SourceSecurityGroupId: !Ref SecurityGroupLB
+          CidrIp: !Ref SecurityGroupLB
         - IpProtocol: tcp
           FromPort: 443
           ToPort: 443
-          SourceSecurityGroupId: !Ref SecurityGroupLB
+          CidrIp: !Ref SecurityGroupLB
         - IpProtocol: icmp
           FromPort: 8
           ToPort: -1
@@ -213,31 +236,6 @@ Resources:
           Value: Security Group for WebApp
 
 
-  SecurityGroupLB:
-    Type: 'AWS::EC2::SecurityGroup'
-    Properties:
-      GroupDescription: SSH Security Group
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: !Ref SSHLocation
-        - IpProtocol: icmp
-          FromPort: 8
-          ToPort: -1
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 443
-          ToPort: 443
-          CidrIp: 0.0.0.0/0   
-        - IpProtocol: tcp
-          FromPort: '80'
-          ToPort: '80'
-          CidrIp: 0.0.0.0/0   
-      VpcId: !Ref VPC
-      Tags:
-        - Key: Name
-          Value: Security Group for LB
 
   SecurityGroupWebServer:
     Type: 'AWS::EC2::SecurityGroup'
@@ -252,11 +250,11 @@ Resources:
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
-          SourceSecurityGroupId: !Ref SecurityGroupLB
+          CidrIp: !Ref SecurityGroupLB
         - IpProtocol: tcp
           FromPort: 443
           ToPort: 443
-          SourceSecurityGroupId: !Ref SecurityGroupLB
+          CidrIp: !Ref SecurityGroupLB
         - IpProtocol: icmp
           FromPort: 8
           ToPort: -1
@@ -307,7 +305,6 @@ Resources:
       SubnetIds: 
         - Ref: PvtSubnet1
         - Ref: PvtSubnet2
-        - Ref: PubSubnet1
       Tags: 
         - 
           Key: Name
